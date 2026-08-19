@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "TODO_GENERATE_A_NEW_GUID",
+  "developer": {
+    "name": "Emma Hall",
+    "websiteUrl": "https://yellow-beach-03b167710.7.azurestaticapps.net",
+    "privacyUrl": "https://yellow-beach-03b167710.7.azurestaticapps.net",
+    "termsOfUseUrl": "https://yellow-beach-03b167710.7.azurestaticapps.net"
+  },
+  "name": {
+    "short": "Holiday Calendar",
+    "full": "Squad Holiday Calendar"
+  },
+  "description": {
+    "short": "Share holidays with your squad",
+    "full": "See when your squad is off and add your own holidays, half-days and appointments."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#aa3bff",
+  "staticTabs": [
+    {
+      "entityId": "holidayCalendar",
+      "name": "Holiday Calendar",
+      "contentUrl": "https://yellow-beach-03b167710.7.azurestaticapps.net",
+      "scopes": ["personal"]
+    }
+  ],
+  "webApplicationInfo": {
+    "id": "7412ef75-d828-4e0c-81c4-2b474cb58dad",
+    "resource": "api://yellow-beach-03b167710.7.azurestaticapps.net/7412ef75-d828-4e0c-81c4-2b474cb58dad"
+  },
+  "validDomains": ["yellow-beach-03b167710.7.azurestaticapps.net"]
+}
