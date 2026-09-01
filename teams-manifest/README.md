@@ -9,3 +9,5 @@ This manifest is a placeholder for when the MVP is ready to test inside real Tea
 - Zip `manifest.json` + the two PNGs together (flat, no subfolder) to get the sideloadable package.
 
 Sideload via the Teams Developer Portal (dev.teams.microsoft.com) once the above is filled in — see `PLAN.md` for the full flow.
+
+Note: `configurableTabs` (the future channel/group-chat tab) is already declared here pointing at `/config`, ahead of that feature actually being built — see the "manifest changes need re-approval" note in `PLAN.md`. Keep any future config page at that same `/config` route so this manifest entry never needs to change again.

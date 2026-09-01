@@ -30,6 +30,13 @@
       "scopes": ["personal"]
     }
   ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://yellow-beach-03b167710.7.azurestaticapps.net/config",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupChat"]
+    }
+  ],
   "webApplicationInfo": {
     "id": "7412ef75-d828-4e0c-81c4-2b474cb58dad",
     "resource": "api://yellow-beach-03b167710.7.azurestaticapps.net/7412ef75-d828-4e0c-81c4-2b474cb58dad"
