@@ -11,6 +11,20 @@
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
+  /* Holiday-type categorical colors — validated with the dataviz skill's
+     validate_palette.js against this file's light --bg (#fff): all-pairs PASS.
+     See the dark-mode block below for the one accepted exception. */
+  --leave-annual: #2a78d6;
+  --leave-annual-bg: rgba(42, 120, 214, 0.12);
+  --leave-appointment: #eda100;
+  --leave-appointment-bg: rgba(237, 161, 0, 0.14);
+  --leave-toil: #1baf7a;
+  --leave-toil-bg: rgba(27, 175, 122, 0.12);
+  --leave-wellbeing: #008300;
+  --leave-wellbeing-bg: rgba(0, 131, 0, 0.12);
+  --leave-absence: #e34948;
+  --leave-absence-bg: rgba(227, 73, 72, 0.12);
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -43,6 +57,26 @@
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+
+    /* Same categorical hues, stepped for the dark surface (#16171d) per the
+       dataviz skill's palette.md. All-pairs validation: one accepted exception —
+       --leave-toil vs --leave-wellbeing sits at normal-vision ΔE 11.9 (below the
+       15 floor) in dark mode; every 8-hue reordering the skill's validator was
+       tried against has some conflicting pair once you need 5 categories
+       simultaneously on screen (its documented palette only guarantees 3
+       all-pairs-safe slots), and this was the least-bad pairing found. Mitigated
+       by always showing the type name as text on every event — color is a
+       supporting accent here, never the sole identifier. */
+    --leave-annual: #3987e5;
+    --leave-annual-bg: rgba(57, 135, 229, 0.18);
+    --leave-appointment: #c98500;
+    --leave-appointment-bg: rgba(201, 133, 0, 0.2);
+    --leave-toil: #199e70;
+    --leave-toil-bg: rgba(25, 158, 112, 0.18);
+    --leave-wellbeing: #008300;
+    --leave-wellbeing-bg: rgba(0, 131, 0, 0.2);
+    --leave-absence: #e66767;
+    --leave-absence-bg: rgba(230, 103, 103, 0.18);
   }
 
   #social .button-icon {

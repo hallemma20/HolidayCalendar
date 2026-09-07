@@ -33,3 +33,164 @@
 .sso-success {
   border-color: var(--accent-border);
 }
+
+/* Entry screen */
+
+.entry-choice,
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 280px;
+}
+
+.entry-form label {
+  text-align: left;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.entry-form input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.entry-form-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.entry-error {
+  color: color-mix(in srgb, red 60%, var(--text-h));
+  font-size: 14px;
+  text-align: left;
+}
+
+/* Calendar screen */
+
+.calendar-screen {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-grow: 1;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.calendar-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.invite-code {
+  color: var(--text);
+  font-family: var(--mono);
+  margin-top: 4px;
+}
+
+.calendar-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.change-squad-link {
+  background: none;
+  border: 1px solid var(--border);
+}
+
+/* Add-event modal */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: var(--shadow);
+}
+
+.modal-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.modal-card label {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.modal-card input,
+.modal-card select,
+.modal-card textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Calendar events, color-coded by holiday type */
+
+.calendar-screen .rbc-event.holiday-event--annual {
+  background: var(--leave-annual-bg);
+  border-left: 4px solid var(--leave-annual);
+  color: var(--text-h);
+}
+
+.calendar-screen .rbc-event.holiday-event--appointment {
+  background: var(--leave-appointment-bg);
+  border-left: 4px solid var(--leave-appointment);
+  color: var(--text-h);
+}
+
+.calendar-screen .rbc-event.holiday-event--toil {
+  background: var(--leave-toil-bg);
+  border-left: 4px solid var(--leave-toil);
+  color: var(--text-h);
+}
+
+.calendar-screen .rbc-event.holiday-event--wellbeing {
+  background: var(--leave-wellbeing-bg);
+  border-left: 4px solid var(--leave-wellbeing);
+  color: var(--text-h);
+}
+
+.calendar-screen .rbc-event.holiday-event--absence {
+  background: var(--leave-absence-bg);
+  border-left: 4px solid var(--leave-absence);
+  color: var(--text-h);
+}

@@ -1,21 +1,34 @@
 import { useEffect, useState } from 'react'
 import { app, authentication } from '@microsoft/teams-js'
 import { jwtDecode } from 'jwt-decode'
+import EntryScreen from './screens/EntryScreen'
+import CalendarScreen from './screens/CalendarScreen'
+import { clearActiveSquadId, getActiveSquadId, getSquad, setActiveSquadId } from './storage/squads'
 import './App.css'
 
 interface TeamsIdToken {
   name?: string
   preferred_username?: string
   upn?: string
+  oid?: string
 }
 
 type Status =
   | { state: 'loading' }
   | { state: 'error'; message: string }
-  | { state: 'success'; name: string; email: string }
+  | { state: 'success'; name: string; email: string; oid: string }
+
+type Screen = { view: 'entry' } | { view: 'calendar'; squadId: string }
 
 function App() {
   const [status, setStatus] = useState<Status>({ state: 'loading' })
+  const [screen, setScreen] = useState<Screen>(() => {
+    const activeSquadId = getActiveSquadId()
+    if (activeSquadId && getSquad(activeSquadId)) {
+      return { view: 'calendar', squadId: activeSquadId }
+    }
+    return { view: 'entry' }
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -31,6 +44,7 @@ function App() {
           state: 'success',
           name: claims.name ?? 'Unknown',
           email: claims.preferred_username ?? claims.upn ?? 'Unknown',
+          oid: claims.oid ?? claims.preferred_username ?? claims.upn ?? 'unknown-oid',
         })
       } catch (err) {
         if (cancelled) return
@@ -50,6 +64,31 @@ function App() {
     }
   }, [])
 
+  if (status.state === 'success' && screen.view === 'entry') {
+    return (
+      <EntryScreen
+        currentUser={{ oid: status.oid, displayName: status.name, joinedAt: new Date().toISOString() }}
+        onSquadReady={(squadId) => {
+          setActiveSquadId(squadId)
+          setScreen({ view: 'calendar', squadId })
+        }}
+      />
+    )
+  }
+
+  if (status.state === 'success' && screen.view === 'calendar') {
+    return (
+      <CalendarScreen
+        squadId={screen.squadId}
+        currentUser={{ oid: status.oid, displayName: status.name, joinedAt: new Date().toISOString() }}
+        onChangeSquad={() => {
+          clearActiveSquadId()
+          setScreen({ view: 'entry' })
+        }}
+      />
+    )
+  }
+
   return (
     <section id="center">
       <h1>Holiday Calendar</h1>
@@ -62,18 +101,20 @@ function App() {
           <p>SSO sign-in failed.</p>
           <code>{status.message}</code>
           <p>This page needs to be opened inside Microsoft Teams to sign in.</p>
-        </div>
-      )}
-
-      {status.state === 'success' && (
-        <div className="sso-card sso-success">
-          <p>Signed in via Teams SSO</p>
-          <p>
-            <strong>Name:</strong> {status.name}
-          </p>
-          <p>
-            <strong>Email:</strong> {status.email}
-          </p>
+          {import.meta.env.DEV && (
+            <button
+              onClick={() =>
+                setStatus({
+                  state: 'success',
+                  name: 'Local Dev User',
+                  email: 'local-dev@example.com',
+                  oid: 'local-dev-oid',
+                })
+              }
+            >
+              Continue as Local Dev User (dev only)
+            </button>
+          )}
         </div>
       )}
     </section>
