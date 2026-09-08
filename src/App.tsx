@@ -3,7 +3,7 @@ import { app, authentication } from '@microsoft/teams-js'
 import { jwtDecode } from 'jwt-decode'
 import EntryScreen from './screens/EntryScreen'
 import CalendarScreen from './screens/CalendarScreen'
-import { clearActiveSquadId, getActiveSquadId, getSquad, setActiveSquadId } from './storage/squads'
+import { clearActiveSquadId, getActiveSquadId, listSquads, setActiveSquadId } from './storage/squads'
 import './App.css'
 
 interface TeamsIdToken {
@@ -22,13 +22,24 @@ type Screen = { view: 'entry' } | { view: 'calendar'; squadId: string }
 
 function App() {
   const [status, setStatus] = useState<Status>({ state: 'loading' })
-  const [screen, setScreen] = useState<Screen>(() => {
+  const [screen, setScreen] = useState<Screen>({ view: 'entry' })
+
+  async function resolveInitialScreen(oid: string) {
     const activeSquadId = getActiveSquadId()
-    if (activeSquadId && getSquad(activeSquadId)) {
-      return { view: 'calendar', squadId: activeSquadId }
+    if (!activeSquadId) return
+    try {
+      const squads = await listSquads(oid)
+      if (squads.some((s) => s.id === activeSquadId)) {
+        setScreen({ view: 'calendar', squadId: activeSquadId })
+      } else {
+        clearActiveSquadId()
+      }
+    } catch {
+      // Couldn't verify membership (e.g. offline) — fall back to the entry screen
+      // rather than showing a calendar we can't confirm the user still belongs to.
+      clearActiveSquadId()
     }
-    return { view: 'entry' }
-  })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -40,12 +51,14 @@ function App() {
         const claims = jwtDecode<TeamsIdToken>(token)
 
         if (cancelled) return
+        const oid = claims.oid ?? claims.preferred_username ?? claims.upn ?? 'unknown-oid'
         setStatus({
           state: 'success',
           name: claims.name ?? 'Unknown',
           email: claims.preferred_username ?? claims.upn ?? 'Unknown',
-          oid: claims.oid ?? claims.preferred_username ?? claims.upn ?? 'unknown-oid',
+          oid,
         })
+        await resolveInitialScreen(oid)
       } catch (err) {
         if (cancelled) return
         setStatus({
@@ -103,14 +116,16 @@ function App() {
           <p>This page needs to be opened inside Microsoft Teams to sign in.</p>
           {import.meta.env.DEV && (
             <button
-              onClick={() =>
+              onClick={() => {
+                const oid = 'local-dev-oid'
                 setStatus({
                   state: 'success',
                   name: 'Local Dev User',
                   email: 'local-dev@example.com',
-                  oid: 'local-dev-oid',
+                  oid,
                 })
-              }
+                void resolveInitialScreen(oid)
+              }}
             >
               Continue as Local Dev User (dev only)
             </button>

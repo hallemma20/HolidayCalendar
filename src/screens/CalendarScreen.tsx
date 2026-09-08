@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Calendar } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { eventPropGetter, localizer, mapHolidayToEvent } from '../calendar/calendarAdapters'
 import { addHoliday, listHolidays } from '../storage/holidays'
-import { getSquad } from '../storage/squads'
+import { listSquads } from '../storage/squads'
 import type { Holiday, NewHolidayInput, Squad, SquadMember } from '../types'
 import AddEventModal from '../components/AddEventModal'
 import '../App.css'
@@ -15,14 +15,56 @@ interface CalendarScreenProps {
 }
 
 function CalendarScreen({ squadId, currentUser, onChangeSquad }: CalendarScreenProps) {
-  const [squad] = useState<Squad | null>(() => getSquad(squadId))
-  const [holidays, setHolidays] = useState<Holiday[]>(() => listHolidays(squadId))
+  const [squad, setSquad] = useState<Squad | null>(null)
+  const [holidays, setHolidays] = useState<Holiday[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  function handleAddEvent(input: NewHolidayInput) {
-    const holiday = addHoliday(squadId, input, currentUser)
-    setHolidays((prev) => [...prev, holiday])
-    setIsModalOpen(false)
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const [squads, groupHolidays] = await Promise.all([
+          listSquads(currentUser.oid),
+          listHolidays(squadId, currentUser.oid),
+        ])
+        if (cancelled) return
+        setSquad(squads.find((s) => s.id === squadId) ?? null)
+        setHolidays(groupHolidays)
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Failed to load squad.')
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [squadId, currentUser.oid])
+
+  async function handleAddEvent(input: NewHolidayInput) {
+    try {
+      const holiday = await addHoliday(squadId, input, currentUser)
+      setHolidays((prev) => [...prev, holiday])
+      setIsModalOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add event.')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <section className="calendar-screen">
+        <p>Loading squad…</p>
+      </section>
+    )
   }
 
   return (
@@ -39,6 +81,8 @@ function CalendarScreen({ squadId, currentUser, onChangeSquad }: CalendarScreenP
           </button>
         </div>
       </header>
+
+      {error && <p className="entry-error">{error}</p>}
 
       <Calendar
         localizer={localizer}

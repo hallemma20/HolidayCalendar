@@ -15,33 +15,48 @@ function EntryScreen({ currentUser, onSquadReady }: EntryScreenProps) {
   const [squadName, setSquadName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleCreate(e: FormEvent) {
+  async function handleCreate(e: FormEvent) {
     e.preventDefault()
     const trimmed = squadName.trim()
     if (!trimmed) {
       setError('Enter a name for your squad.')
       return
     }
-    const squad = createSquad(trimmed, currentUser)
-    onSquadReady(squad.id)
+    setError(null)
+    setIsSubmitting(true)
+    try {
+      const squad = await createSquad(trimmed, currentUser)
+      onSquadReady(squad.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create squad.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  function handleJoin(e: FormEvent) {
+  async function handleJoin(e: FormEvent) {
     e.preventDefault()
     const trimmed = inviteCode.trim()
     if (!trimmed) {
       setError('Enter an invite code.')
       return
     }
-    const squad = joinSquad(trimmed, currentUser)
-    if (!squad) {
-      setError(
-        "No squad found with that code. In this prototype, a code only works if the squad was created in this same browser — cross-device joining arrives once the app has a shared backend.",
-      )
-      return
+    setError(null)
+    setIsSubmitting(true)
+    try {
+      const squad = await joinSquad(trimmed, currentUser)
+      if (!squad) {
+        setError('No squad found with that invite code.')
+        return
+      }
+      onSquadReady(squad.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join squad.')
+    } finally {
+      setIsSubmitting(false)
     }
-    onSquadReady(squad.id)
   }
 
   return (
@@ -67,10 +82,12 @@ function EntryScreen({ currentUser, onSquadReady }: EntryScreenProps) {
           />
           {error && <p className="entry-error">{error}</p>}
           <div className="entry-form-actions">
-            <button type="button" onClick={() => setMode('choice')}>
+            <button type="button" onClick={() => setMode('choice')} disabled={isSubmitting}>
               Back
             </button>
-            <button type="submit">Create squad</button>
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating…' : 'Create squad'}
+            </button>
           </div>
         </form>
       )}
@@ -87,10 +104,12 @@ function EntryScreen({ currentUser, onSquadReady }: EntryScreenProps) {
           />
           {error && <p className="entry-error">{error}</p>}
           <div className="entry-form-actions">
-            <button type="button" onClick={() => setMode('choice')}>
+            <button type="button" onClick={() => setMode('choice')} disabled={isSubmitting}>
               Back
             </button>
-            <button type="submit">Join squad</button>
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Joining…' : 'Join squad'}
+            </button>
           </div>
         </form>
       )}
