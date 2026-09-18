@@ -1,8 +1,9 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
+import { getAuthenticatedUser } from '../auth'
 import { getHolidaysContainer } from '../cosmosClient'
 import { errorResponse, HttpError, json } from '../httpHelpers'
 import { requireMember } from '../membership'
-import type { Holiday, HolidayType, SquadMember } from '../types'
+import type { Holiday, HolidayType } from '../types'
 
 interface NewHolidayBody {
   startUtc?: string
@@ -10,17 +11,16 @@ interface NewHolidayBody {
   allDay?: boolean
   type?: HolidayType
   note?: string
-  owner?: SquadMember
 }
 
 async function listHolidays(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    const user = await getAuthenticatedUser(request)
     const groupId = request.params.groupId
-    const oid = request.query.get('oid')
-    if (!groupId || !oid) {
-      throw new HttpError(400, 'groupId and oid are required')
+    if (!groupId) {
+      throw new HttpError(400, 'groupId is required')
     }
-    await requireMember(groupId, oid)
+    await requireMember(groupId, user.oid)
 
     const { resources } = await getHolidaysContainer()
       .items.query<Holiday>(
@@ -37,19 +37,20 @@ async function listHolidays(request: HttpRequest, _context: InvocationContext): 
 
 async function addHoliday(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    const user = await getAuthenticatedUser(request)
     const groupId = request.params.groupId
     const body = (await request.json()) as NewHolidayBody
-    if (!groupId || !body.owner?.oid || !body.startUtc || !body.endUtc || !body.type) {
-      throw new HttpError(400, 'groupId, owner, startUtc, endUtc and type are required')
+    if (!groupId || !body.startUtc || !body.endUtc || !body.type) {
+      throw new HttpError(400, 'groupId, startUtc, endUtc and type are required')
     }
-    await requireMember(groupId, body.owner.oid)
+    await requireMember(groupId, user.oid)
 
     const now = new Date().toISOString()
     const holiday: Holiday = {
       id: crypto.randomUUID(),
       groupId,
-      oid: body.owner.oid,
-      displayName: body.owner.displayName,
+      oid: user.oid,
+      displayName: user.displayName,
       startUtc: body.startUtc,
       endUtc: body.endUtc,
       allDay: body.allDay ?? false,
@@ -67,10 +68,11 @@ async function addHoliday(request: HttpRequest, _context: InvocationContext): Pr
 
 async function updateHoliday(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    const user = await getAuthenticatedUser(request)
     const holidayId = request.params.holidayId
-    const body = (await request.json()) as Partial<Holiday> & { groupId?: string; oid?: string }
-    if (!holidayId || !body.groupId || !body.oid) {
-      throw new HttpError(400, 'groupId and oid are required')
+    const body = (await request.json()) as Partial<Holiday> & { groupId?: string }
+    if (!holidayId || !body.groupId) {
+      throw new HttpError(400, 'groupId is required')
     }
 
     const { resource: existing } = await getHolidaysContainer()
@@ -79,7 +81,7 @@ async function updateHoliday(request: HttpRequest, _context: InvocationContext):
     if (!existing) {
       throw new HttpError(404, `Holiday ${holidayId} not found`)
     }
-    if (existing.oid !== body.oid) {
+    if (existing.oid !== user.oid) {
       throw new HttpError(403, 'You can only edit your own entries')
     }
 
@@ -101,10 +103,11 @@ async function updateHoliday(request: HttpRequest, _context: InvocationContext):
 
 async function deleteHoliday(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    const user = await getAuthenticatedUser(request)
     const holidayId = request.params.holidayId
-    const body = (await request.json()) as { groupId?: string; oid?: string }
-    if (!holidayId || !body.groupId || !body.oid) {
-      throw new HttpError(400, 'groupId and oid are required')
+    const body = (await request.json()) as { groupId?: string }
+    if (!holidayId || !body.groupId) {
+      throw new HttpError(400, 'groupId is required')
     }
 
     const { resource: existing } = await getHolidaysContainer()
@@ -113,7 +116,7 @@ async function deleteHoliday(request: HttpRequest, _context: InvocationContext):
     if (!existing) {
       throw new HttpError(404, `Holiday ${holidayId} not found`)
     }
-    if (existing.oid !== body.oid) {
+    if (existing.oid !== user.oid) {
       throw new HttpError(403, 'You can only delete your own entries')
     }
 

@@ -1,8 +1,9 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
+import { getAuthenticatedUser } from '../auth'
 import { getGroupsContainer } from '../cosmosClient'
 import { errorResponse, HttpError, json } from '../httpHelpers'
 import { requireMember } from '../membership'
-import type { Squad, SquadMember } from '../types'
+import type { Squad } from '../types'
 
 // Unambiguous alphabet (no 0/O/1/I/l) so a code is easy to read aloud/type.
 const INVITE_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -18,18 +19,19 @@ function generateInviteCode(): string {
 
 async function createGroup(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const body = (await request.json()) as { name?: string; creator?: SquadMember }
-    if (!body.name?.trim() || !body.creator?.oid) {
-      throw new HttpError(400, 'name and creator are required')
+    const user = await getAuthenticatedUser(request)
+    const body = (await request.json()) as { name?: string }
+    if (!body.name?.trim()) {
+      throw new HttpError(400, 'name is required')
     }
 
     const squad: Squad = {
       id: crypto.randomUUID(),
       name: body.name.trim(),
-      createdBy: body.creator.oid,
+      createdBy: user.oid,
       createdAt: new Date().toISOString(),
       inviteCode: generateInviteCode(),
-      members: [body.creator],
+      members: [{ oid: user.oid, displayName: user.displayName, joinedAt: new Date().toISOString() }],
     }
     await getGroupsContainer().items.create(squad)
     return json(201, squad)
@@ -40,9 +42,10 @@ async function createGroup(request: HttpRequest, _context: InvocationContext): P
 
 async function joinGroup(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const body = (await request.json()) as { inviteCode?: string; member?: SquadMember }
-    if (!body.inviteCode?.trim() || !body.member?.oid) {
-      throw new HttpError(400, 'inviteCode and member are required')
+    const user = await getAuthenticatedUser(request)
+    const body = (await request.json()) as { inviteCode?: string }
+    if (!body.inviteCode?.trim()) {
+      throw new HttpError(400, 'inviteCode is required')
     }
     const normalizedCode = body.inviteCode.trim().toUpperCase()
 
@@ -58,10 +61,13 @@ async function joinGroup(request: HttpRequest, _context: InvocationContext): Pro
       throw new HttpError(404, 'No squad found with that invite code')
     }
 
-    const alreadyMember = squad.members.some((m) => m.oid === body.member!.oid)
+    const alreadyMember = squad.members.some((m) => m.oid === user.oid)
     const updatedSquad: Squad = alreadyMember
       ? squad
-      : { ...squad, members: [...squad.members, body.member] }
+      : {
+          ...squad,
+          members: [...squad.members, { oid: user.oid, displayName: user.displayName, joinedAt: new Date().toISOString() }],
+        }
 
     if (!alreadyMember) {
       await getGroupsContainer().item(squad.id, squad.id).replace(updatedSquad)
@@ -74,15 +80,12 @@ async function joinGroup(request: HttpRequest, _context: InvocationContext): Pro
 
 async function listGroups(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const oid = request.query.get('oid')
-    if (!oid) {
-      throw new HttpError(400, 'oid query parameter is required')
-    }
+    const user = await getAuthenticatedUser(request)
 
     const { resources } = await getGroupsContainer()
       .items.query<Squad>({
         query: 'SELECT * FROM c WHERE ARRAY_CONTAINS(c.members, {"oid": @oid}, true)',
-        parameters: [{ name: '@oid', value: oid }],
+        parameters: [{ name: '@oid', value: user.oid }],
       })
       .fetchAll()
 
@@ -97,13 +100,13 @@ async function regenerateInviteCode(
   _context: InvocationContext,
 ): Promise<HttpResponseInit> {
   try {
+    const user = await getAuthenticatedUser(request)
     const groupId = request.params.groupId
-    const body = (await request.json()) as { oid?: string }
-    if (!groupId || !body.oid) {
-      throw new HttpError(400, 'groupId and oid are required')
+    if (!groupId) {
+      throw new HttpError(400, 'groupId is required')
     }
 
-    const squad = await requireMember(groupId, body.oid)
+    const squad = await requireMember(groupId, user.oid)
     const updatedSquad: Squad = { ...squad, inviteCode: generateInviteCode() }
     await getGroupsContainer().item(groupId, groupId).replace(updatedSquad)
     return json(200, updatedSquad)
@@ -114,14 +117,14 @@ async function regenerateInviteCode(
 
 async function leaveGroup(request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    const user = await getAuthenticatedUser(request)
     const groupId = request.params.groupId
-    const body = (await request.json()) as { oid?: string }
-    if (!groupId || !body.oid) {
-      throw new HttpError(400, 'groupId and oid are required')
+    if (!groupId) {
+      throw new HttpError(400, 'groupId is required')
     }
 
-    const squad = await requireMember(groupId, body.oid)
-    const remainingMembers = squad.members.filter((m) => m.oid !== body.oid)
+    const squad = await requireMember(groupId, user.oid)
+    const remainingMembers = squad.members.filter((m) => m.oid !== user.oid)
 
     if (remainingMembers.length === 0) {
       // No admin role — an emptied squad has nothing left to isolate, so it's cleaned up

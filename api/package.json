@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@azure/cosmos": "^4.2.0",
-    "@azure/functions": "^4.6.0"
+    "@azure/functions": "^4.6.0",
+    "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^4.1.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.13.3",
     "typescript": "~6.0.2"
   }

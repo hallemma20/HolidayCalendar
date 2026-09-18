@@ -1,23 +1,23 @@
-import type { Squad, SquadMember } from '../types'
+import type { Squad } from '../types'
 import { ApiError, apiFetch } from './apiClient'
 import { readJson, writeJson } from './localStorageClient'
 
 const ACTIVE_SQUAD_KEY = 'holidayCalendar.activeSquadId.v1'
 
-// mirrors POST /groups
-export function createSquad(name: string, creator: SquadMember): Promise<Squad> {
+// mirrors POST /groups — creator is derived server-side from the SSO bearer token
+export function createSquad(name: string): Promise<Squad> {
   return apiFetch<Squad>('/groups', {
     method: 'POST',
-    body: JSON.stringify({ name, creator }),
+    body: JSON.stringify({ name }),
   })
 }
 
-// mirrors POST /groups/join { inviteCode }
-export async function joinSquad(inviteCode: string, member: SquadMember): Promise<Squad | null> {
+// mirrors POST /groups/join { inviteCode } — member is derived server-side from the SSO bearer token
+export async function joinSquad(inviteCode: string): Promise<Squad | null> {
   try {
     return await apiFetch<Squad>('/groups/join', {
       method: 'POST',
-      body: JSON.stringify({ inviteCode, member }),
+      body: JSON.stringify({ inviteCode }),
     })
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null
@@ -25,9 +25,9 @@ export async function joinSquad(inviteCode: string, member: SquadMember): Promis
   }
 }
 
-// mirrors GET /groups
-export function listSquads(oid: string): Promise<Squad[]> {
-  return apiFetch<Squad[]>(`/groups?oid=${encodeURIComponent(oid)}`)
+// mirrors GET /groups — caller is derived server-side from the SSO bearer token
+export function listSquads(): Promise<Squad[]> {
+  return apiFetch<Squad[]>('/groups')
 }
 
 export function getActiveSquadId(): string | null {

@@ -1,16 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { createSquad, joinSquad } from '../storage/squads'
-import type { SquadMember } from '../types'
 import '../App.css'
 
 interface EntryScreenProps {
-  currentUser: SquadMember
   onSquadReady: (squadId: string) => void
 }
 
 type Mode = 'choice' | 'create' | 'join'
 
-function EntryScreen({ currentUser, onSquadReady }: EntryScreenProps) {
+function EntryScreen({ onSquadReady }: EntryScreenProps) {
   const [mode, setMode] = useState<Mode>('choice')
   const [squadName, setSquadName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
@@ -27,7 +25,7 @@ function EntryScreen({ currentUser, onSquadReady }: EntryScreenProps) {
     setError(null)
     setIsSubmitting(true)
     try {
-      const squad = await createSquad(trimmed, currentUser)
+      const squad = await createSquad(trimmed)
       onSquadReady(squad.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create squad.')
@@ -46,7 +44,7 @@ function EntryScreen({ currentUser, onSquadReady }: EntryScreenProps) {
     setError(null)
     setIsSubmitting(true)
     try {
-      const squad = await joinSquad(trimmed, currentUser)
+      const squad = await joinSquad(trimmed)
       if (!squad) {
         setError('No squad found with that invite code.')
         return

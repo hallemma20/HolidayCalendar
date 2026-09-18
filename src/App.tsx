@@ -3,6 +3,7 @@ import { app, authentication } from '@microsoft/teams-js'
 import { jwtDecode } from 'jwt-decode'
 import EntryScreen from './screens/EntryScreen'
 import CalendarScreen from './screens/CalendarScreen'
+import { setAuthToken } from './auth/token'
 import { clearActiveSquadId, getActiveSquadId, listSquads, setActiveSquadId } from './storage/squads'
 import './App.css'
 
@@ -24,11 +25,11 @@ function App() {
   const [status, setStatus] = useState<Status>({ state: 'loading' })
   const [screen, setScreen] = useState<Screen>({ view: 'entry' })
 
-  async function resolveInitialScreen(oid: string) {
+  async function resolveInitialScreen() {
     const activeSquadId = getActiveSquadId()
     if (!activeSquadId) return
     try {
-      const squads = await listSquads(oid)
+      const squads = await listSquads()
       if (squads.some((s) => s.id === activeSquadId)) {
         setScreen({ view: 'calendar', squadId: activeSquadId })
       } else {
@@ -48,6 +49,7 @@ function App() {
       try {
         await app.initialize()
         const token = await authentication.getAuthToken()
+        setAuthToken(token)
         const claims = jwtDecode<TeamsIdToken>(token)
 
         if (cancelled) return
@@ -58,7 +60,7 @@ function App() {
           email: claims.preferred_username ?? claims.upn ?? 'Unknown',
           oid,
         })
-        await resolveInitialScreen(oid)
+        await resolveInitialScreen()
       } catch (err) {
         if (cancelled) return
         setStatus({
@@ -80,7 +82,6 @@ function App() {
   if (status.state === 'success' && screen.view === 'entry') {
     return (
       <EntryScreen
-        currentUser={{ oid: status.oid, displayName: status.name, joinedAt: new Date().toISOString() }}
         onSquadReady={(squadId) => {
           setActiveSquadId(squadId)
           setScreen({ view: 'calendar', squadId })
@@ -93,7 +94,6 @@ function App() {
     return (
       <CalendarScreen
         squadId={screen.squadId}
-        currentUser={{ oid: status.oid, displayName: status.name, joinedAt: new Date().toISOString() }}
         onChangeSquad={() => {
           clearActiveSquadId()
           setScreen({ view: 'entry' })
@@ -117,14 +117,13 @@ function App() {
           {import.meta.env.DEV && (
             <button
               onClick={() => {
-                const oid = 'local-dev-oid'
                 setStatus({
                   state: 'success',
                   name: 'Local Dev User',
                   email: 'local-dev@example.com',
-                  oid,
+                  oid: 'local-dev-oid',
                 })
-                void resolveInitialScreen(oid)
+                void resolveInitialScreen()
               }}
             >
               Continue as Local Dev User (dev only)

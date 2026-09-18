@@ -4,17 +4,16 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { eventPropGetter, localizer, mapHolidayToEvent } from '../calendar/calendarAdapters'
 import { addHoliday, listHolidays } from '../storage/holidays'
 import { listSquads } from '../storage/squads'
-import type { Holiday, NewHolidayInput, Squad, SquadMember } from '../types'
+import type { Holiday, NewHolidayInput, Squad } from '../types'
 import AddEventModal from '../components/AddEventModal'
 import '../App.css'
 
 interface CalendarScreenProps {
   squadId: string
-  currentUser: SquadMember
   onChangeSquad: () => void
 }
 
-function CalendarScreen({ squadId, currentUser, onChangeSquad }: CalendarScreenProps) {
+function CalendarScreen({ squadId, onChangeSquad }: CalendarScreenProps) {
   const [squad, setSquad] = useState<Squad | null>(null)
   const [holidays, setHolidays] = useState<Holiday[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -28,10 +27,7 @@ function CalendarScreen({ squadId, currentUser, onChangeSquad }: CalendarScreenP
       setIsLoading(true)
       setError(null)
       try {
-        const [squads, groupHolidays] = await Promise.all([
-          listSquads(currentUser.oid),
-          listHolidays(squadId, currentUser.oid),
-        ])
+        const [squads, groupHolidays] = await Promise.all([listSquads(), listHolidays(squadId)])
         if (cancelled) return
         setSquad(squads.find((s) => s.id === squadId) ?? null)
         setHolidays(groupHolidays)
@@ -47,11 +43,11 @@ function CalendarScreen({ squadId, currentUser, onChangeSquad }: CalendarScreenP
     return () => {
       cancelled = true
     }
-  }, [squadId, currentUser.oid])
+  }, [squadId])
 
   async function handleAddEvent(input: NewHolidayInput) {
     try {
-      const holiday = await addHoliday(squadId, input, currentUser)
+      const holiday = await addHoliday(squadId, input)
       setHolidays((prev) => [...prev, holiday])
       setIsModalOpen(false)
     } catch (err) {
