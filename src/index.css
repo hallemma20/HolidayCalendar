@@ -1,145 +1,105 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
+  /* Fixed dark theme (matches the app's design reference) rather than
+     adapting to system light/dark preference. */
+  --bg: #0a0d1a;
+  --surface: #11162a;
+  --surface-raised: #151b33;
+  --surface-hover: #1c2340;
+  --field-bg: #0d1226;
+  --field-border: #262d4d;
+  --border: #232a48;
+
+  --text: #93a0c3;
+  --text-muted: #6b7599;
+  --text-h: #f3f5fc;
+
+  --accent: #6d5cf5;
+  --accent-hover: #7c6cff;
+  --accent-bg: rgba(109, 92, 245, 0.16);
+  --accent-border: rgba(109, 92, 245, 0.55);
+
+  --danger: #f0576a;
+  --danger-bg: rgba(240, 87, 106, 0.14);
+  --danger-border: rgba(240, 87, 106, 0.5);
+
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.45) 0 20px 40px -12px, rgba(0, 0, 0, 0.3) 0 8px 16px -8px;
 
-  /* Holiday-type categorical colors — validated with the dataviz skill's
-     validate_palette.js against this file's light --bg (#fff): all-pairs PASS.
-     See the dark-mode block below for the one accepted exception. */
-  --leave-annual: #2a78d6;
-  --leave-annual-bg: rgba(42, 120, 214, 0.12);
-  --leave-appointment: #eda100;
-  --leave-appointment-bg: rgba(237, 161, 0, 0.14);
-  --leave-toil: #1baf7a;
-  --leave-toil-bg: rgba(27, 175, 122, 0.12);
-  --leave-wellbeing: #008300;
-  --leave-wellbeing-bg: rgba(0, 131, 0, 0.12);
-  --leave-absence: #e34948;
-  --leave-absence-bg: rgba(227, 73, 72, 0.12);
+  /* Holiday-type categorical colors */
+  --type-annual: #3b82f6;
+  --type-annual-bg: rgba(59, 130, 246, 0.16);
+  --type-appointment: #8b5cf6;
+  --type-appointment-bg: rgba(139, 92, 246, 0.16);
+  --type-toil: #14b8a6;
+  --type-toil-bg: rgba(20, 184, 166, 0.16);
+  --type-wellbeing: #eab308;
+  --type-wellbeing-bg: rgba(234, 179, 8, 0.16);
+  --type-absence: #f0576a;
+  --type-absence-bg: rgba(240, 87, 106, 0.16);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
+  font: 16px/145% var(--sans);
+  letter-spacing: 0.1px;
+  color-scheme: dark;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-
-    /* Same categorical hues, stepped for the dark surface (#16171d) per the
-       dataviz skill's palette.md. All-pairs validation: one accepted exception —
-       --leave-toil vs --leave-wellbeing sits at normal-vision ΔE 11.9 (below the
-       15 floor) in dark mode; every 8-hue reordering the skill's validator was
-       tried against has some conflicting pair once you need 5 categories
-       simultaneously on screen (its documented palette only guarantees 3
-       all-pairs-safe slots), and this was the least-bad pairing found. Mitigated
-       by always showing the type name as text on every event — color is a
-       supporting accent here, never the sole identifier. */
-    --leave-annual: #3987e5;
-    --leave-annual-bg: rgba(57, 135, 229, 0.18);
-    --leave-appointment: #c98500;
-    --leave-appointment-bg: rgba(201, 133, 0, 0.2);
-    --leave-toil: #199e70;
-    --leave-toil-bg: rgba(25, 158, 112, 0.18);
-    --leave-wellbeing: #008300;
-    --leave-wellbeing-bg: rgba(0, 131, 0, 0.2);
-    --leave-absence: #e66767;
-    --leave-absence-bg: rgba(230, 103, 103, 0.18);
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+* {
+  box-sizing: border-box;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
+  background: var(--bg);
 }
 
 body {
   margin: 0;
+  background: var(--bg);
 }
 
 h1,
 h2 {
   font-family: var(--heading);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-h);
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+  font-size: 28px;
+  letter-spacing: -0.4px;
+  margin: 0;
 }
+
 h2 {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 118%;
-  letter-spacing: -0.24px;
+  letter-spacing: -0.2px;
   margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
 }
+
 p {
   margin: 0;
 }
 
-code,
-.counter {
+code {
   font-family: var(--mono);
   display: inline-flex;
   border-radius: 4px;
   color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 135%;
   padding: 4px 8px;
-  background: var(--code-bg);
+  background: var(--field-bg);
 }

@@ -44,9 +44,10 @@ export interface Holiday {
 
 export interface NewHolidayInput {
   startDate: string
-  startTime: string
   endDate: string
-  endTime: string
+  startTime?: string
+  endTime?: string
+  allDay: boolean
   type: HolidayType
   note?: string
 }

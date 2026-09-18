@@ -94,6 +94,7 @@ function App() {
     return (
       <CalendarScreen
         squadId={screen.squadId}
+        currentUserOid={status.oid}
         onChangeSquad={() => {
           clearActiveSquadId()
           setScreen({ view: 'entry' })
@@ -105,7 +106,6 @@ function App() {
   return (
     <section id="center">
       <h1>Holiday Calendar</h1>
-      <p>Teams SSO proof of concept</p>
 
       {status.state === 'loading' && <p>Signing you in via Teams SSO…</p>}
 
@@ -116,6 +116,8 @@ function App() {
           <p>This page needs to be opened inside Microsoft Teams to sign in.</p>
           {import.meta.env.DEV && (
             <button
+              type="button"
+              className="btn btn-secondary"
               onClick={() => {
                 setStatus({
                   state: 'success',
