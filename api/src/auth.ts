@@ -25,7 +25,10 @@ function getJwksClient(): jwksClient.JwksClient {
 }
 
 function getSigningKey(header: JwtHeader, callback: SigningKeyCallback) {
-  getJwksClient().getSigningKey(header.kid, (err, key) => {
+  // Some AAD v1.0 tokens carry the key id as x5t instead of kid; for AAD's
+  // JWKS the two values are identical per key, so fall back to x5t.
+  const kid = header.kid ?? (header as { x5t?: string }).x5t
+  getJwksClient().getSigningKey(kid, (err, key) => {
     if (err || !key) {
       callback(err ?? new Error('Signing key not found'))
       return
