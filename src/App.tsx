@@ -3,8 +3,10 @@ import { app, authentication } from '@microsoft/teams-js'
 import { jwtDecode } from 'jwt-decode'
 import EntryScreen from './screens/EntryScreen'
 import CalendarScreen from './screens/CalendarScreen'
+import SquadPickerScreen from './screens/SquadPickerScreen'
 import { setAuthToken } from './auth/token'
-import { clearActiveSquadId, getActiveSquadId, listSquads, setActiveSquadId } from './storage/squads'
+import { listSquads } from './storage/squads'
+import type { Squad } from './types'
 import './App.css'
 
 interface TeamsIdToken {
@@ -19,27 +21,31 @@ type Status =
   | { state: 'error'; message: string }
   | { state: 'success'; name: string; email: string; oid: string }
 
-type Screen = { view: 'entry' } | { view: 'calendar'; squadId: string }
+type Screen = { view: 'entry' } | { view: 'picker' } | { view: 'calendar'; squadId: string }
 
 function App() {
   const [status, setStatus] = useState<Status>({ state: 'loading' })
   const [screen, setScreen] = useState<Screen>({ view: 'entry' })
+  const [squads, setSquads] = useState<Squad[]>([])
 
+  // Loads the user's squads and picks the landing screen: none -> create/join,
+  // one -> straight to its calendar, several -> the squad picker.
   async function resolveInitialScreen() {
-    const activeSquadId = getActiveSquadId()
-    if (!activeSquadId) return
     try {
-      const squads = await listSquads()
-      if (squads.some((s) => s.id === activeSquadId)) {
-        setScreen({ view: 'calendar', squadId: activeSquadId })
-      } else {
-        clearActiveSquadId()
+      const mine = await listSquads()
+      setSquads(mine)
+      if (mine.length === 1) {
+        setScreen({ view: 'calendar', squadId: mine[0].id })
+      } else if (mine.length > 1) {
+        setScreen({ view: 'picker' })
       }
     } catch {
-      // Couldn't verify membership (e.g. offline) — fall back to the entry screen
-      // rather than showing a calendar we can't confirm the user still belongs to.
-      clearActiveSquadId()
+      // Couldn't load squads (e.g. offline) — fall back to the entry screen.
     }
+  }
+
+  function backToSquads(): Screen {
+    return squads.length === 1 ? { view: 'calendar', squadId: squads[0].id } : { view: 'picker' }
   }
 
   useEffect(() => {
@@ -82,10 +88,25 @@ function App() {
   if (status.state === 'success' && screen.view === 'entry') {
     return (
       <EntryScreen
-        onSquadReady={(squadId) => {
-          setActiveSquadId(squadId)
+        onCancel={squads.length > 0 ? () => setScreen(backToSquads()) : undefined}
+        onSquadReady={async (squadId) => {
+          try {
+            setSquads(await listSquads())
+          } catch {
+            // The calendar screen surfaces any load failure itself.
+          }
           setScreen({ view: 'calendar', squadId })
         }}
+      />
+    )
+  }
+
+  if (status.state === 'success' && screen.view === 'picker') {
+    return (
+      <SquadPickerScreen
+        squads={squads}
+        onSelectSquad={(squadId) => setScreen({ view: 'calendar', squadId })}
+        onAddSquad={() => setScreen({ view: 'entry' })}
       />
     )
   }
@@ -94,10 +115,17 @@ function App() {
     return (
       <CalendarScreen
         squadId={screen.squadId}
+        squads={squads}
         currentUserOid={status.oid}
-        onChangeSquad={() => {
-          clearActiveSquadId()
-          setScreen({ view: 'entry' })
+        onSelectSquad={(squadId) => setScreen({ view: 'calendar', squadId })}
+        onAddSquad={() => setScreen({ view: 'entry' })}
+        onSquadUpdated={(updated) => setSquads((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))}
+        onLeftSquad={(leftId) => {
+          const remaining = squads.filter((s) => s.id !== leftId)
+          setSquads(remaining)
+          if (remaining.length === 0) setScreen({ view: 'entry' })
+          else if (remaining.length === 1) setScreen({ view: 'calendar', squadId: remaining[0].id })
+          else setScreen({ view: 'picker' })
         }}
       />
     )

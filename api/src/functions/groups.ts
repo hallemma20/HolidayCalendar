@@ -1,9 +1,9 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getAuthenticatedUser } from '../auth'
-import { getGroupsContainer } from '../cosmosClient'
+import { getGroupsContainer, getHolidaysContainer } from '../cosmosClient'
 import { errorResponse, HttpError, json } from '../httpHelpers'
 import { requireMember } from '../membership'
-import type { Squad } from '../types'
+import type { Holiday, Squad } from '../types'
 
 // Unambiguous alphabet (no 0/O/1/I/l) so a code is easy to read aloud/type.
 const INVITE_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -125,6 +125,18 @@ async function leaveGroup(request: HttpRequest, _context: InvocationContext): Pr
 
     const squad = await requireMember(groupId, user.oid)
     const remainingMembers = squad.members.filter((m) => m.oid !== user.oid)
+
+    // Leaving removes the member's events from the squad calendar; if they were the last
+    // member the whole squad's events go too, so nothing is orphaned.
+    const { resources: leavingEvents } = await getHolidaysContainer()
+      .items.query<Holiday>(
+        remainingMembers.length === 0
+          ? { query: 'SELECT c.id FROM c' }
+          : { query: 'SELECT c.id FROM c WHERE c.oid = @oid', parameters: [{ name: '@oid', value: user.oid }] },
+        { partitionKey: groupId },
+      )
+      .fetchAll()
+    await Promise.all(leavingEvents.map((h) => getHolidaysContainer().item(h.id, groupId).delete()))
 
     if (remainingMembers.length === 0) {
       // No admin role — an emptied squad has nothing left to isolate, so it's cleaned up

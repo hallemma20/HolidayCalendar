@@ -4,15 +4,21 @@ import { Calendar, type View } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { eventPropGetter, localizer, mapHolidayToEvent } from '../calendar/calendarAdapters'
 import { addHoliday, deleteHoliday, listHolidays, updateHoliday } from '../storage/holidays'
-import { listSquads } from '../storage/squads'
 import type { Holiday, NewHolidayInput, Squad } from '../types'
 import EventModal from '../components/EventModal'
+import RegenerateCodeModal from '../components/RegenerateCodeModal'
+import LeaveSquadModal from '../components/LeaveSquadModal'
+import { leaveSquad, regenerateInviteCode } from '../storage/squads'
 import '../App.css'
 
 interface CalendarScreenProps {
   squadId: string
   currentUserOid: string
-  onChangeSquad: () => void
+  squads: Squad[]
+  onSelectSquad: (squadId: string) => void
+  onAddSquad: () => void
+  onSquadUpdated: (squad: Squad) => void
+  onLeftSquad: (squadId: string) => void
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; holiday: Holiday } | null
@@ -29,8 +35,16 @@ function formatRangeLabel(date: Date, view: View): string {
   return `${format(start, sameMonth ? 'd' : 'd MMM')} – ${format(end, 'd MMM yyyy')}`
 }
 
-function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScreenProps) {
-  const [squad, setSquad] = useState<Squad | null>(null)
+function CalendarScreen({
+  squadId,
+  squads,
+  currentUserOid,
+  onSelectSquad,
+  onAddSquad,
+  onSquadUpdated,
+  onLeftSquad,
+}: CalendarScreenProps) {
+  const squad = squads.find((s) => s.id === squadId) ?? null
   const [holidays, setHolidays] = useState<Holiday[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +53,8 @@ function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScre
   const [view, setView] = useState<View>('month')
   const [date, setDate] = useState(new Date())
   const [copied, setCopied] = useState(false)
+  const [leave, setLeave] = useState<{ error: string | null; isSubmitting: boolean } | null>(null)
+  const [regenerate, setRegenerate] = useState<{ error: string | null; isSubmitting: boolean } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -47,9 +63,8 @@ function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScre
       setIsLoading(true)
       setError(null)
       try {
-        const [squads, groupHolidays] = await Promise.all([listSquads(), listHolidays(squadId)])
+        const groupHolidays = await listHolidays(squadId)
         if (cancelled) return
-        setSquad(squads.find((s) => s.id === squadId) ?? null)
         setHolidays(groupHolidays)
       } catch (err) {
         if (cancelled) return
@@ -115,6 +130,29 @@ function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScre
     }
   }
 
+  async function handleLeaveSquad() {
+    setLeave({ error: null, isSubmitting: true })
+    try {
+      await leaveSquad(squadId)
+      onLeftSquad(squadId)
+    } catch (err) {
+      setLeave({ error: err instanceof Error ? err.message : 'Failed to leave squad.', isSubmitting: false })
+    }
+  }
+
+  async function handleRegenerateInviteCode() {
+    setRegenerate({ error: null, isSubmitting: true })
+    try {
+      onSquadUpdated(await regenerateInviteCode(squadId))
+      setRegenerate(null)
+    } catch (err) {
+      setRegenerate({
+        error: err instanceof Error ? err.message : 'Failed to regenerate invite code.',
+        isSubmitting: false,
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <section className="calendar-screen">
@@ -127,7 +165,22 @@ function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScre
     <section className="calendar-screen">
       <header className="calendar-header">
         <div>
-          <h1>{squad?.name ?? 'Squad'}</h1>
+          {squads.length > 1 ? (
+            <select
+              className="squad-select"
+              aria-label="Switch squad"
+              value={squadId}
+              onChange={(e) => onSelectSquad(e.target.value)}
+            >
+              {squads.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <h1>{squad?.name ?? 'Squad'}</h1>
+          )}
           <p className="calendar-subtitle">View and manage your squad's holidays and time off</p>
         </div>
         <div className="calendar-header-actions">
@@ -137,9 +190,24 @@ function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScre
             <button type="button" className="icon-btn" onClick={handleCopyInviteCode} title="Copy invite code">
               {copied ? '✓' : '⧉'}
             </button>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setRegenerate({ error: null, isSubmitting: false })}
+              title="Regenerate invite code"
+            >
+              ↻
+            </button>
           </div>
-          <button type="button" className="btn btn-ghost" onClick={onChangeSquad}>
-            Change squad
+          <button type="button" className="btn btn-ghost" onClick={onAddSquad}>
+            Create or join squad
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger-ghost"
+            onClick={() => setLeave({ error: null, isSubmitting: false })}
+          >
+            Leave squad
           </button>
         </div>
       </header>
@@ -196,6 +264,25 @@ function CalendarScreen({ squadId, currentUserOid, onChangeSquad }: CalendarScre
           style={{ height: 650 }}
         />
       </div>
+
+      {leave && (
+        <LeaveSquadModal
+          squadName={squad?.name ?? 'this squad'}
+          isSubmitting={leave.isSubmitting}
+          error={leave.error}
+          onCancel={() => setLeave(null)}
+          onConfirm={() => void handleLeaveSquad()}
+        />
+      )}
+
+      {regenerate && (
+        <RegenerateCodeModal
+          isSubmitting={regenerate.isSubmitting}
+          error={regenerate.error}
+          onCancel={() => setRegenerate(null)}
+          onConfirm={() => void handleRegenerateInviteCode()}
+        />
+      )}
 
       {modal?.mode === 'add' && (
         <EventModal

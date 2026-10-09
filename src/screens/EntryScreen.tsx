@@ -4,11 +4,13 @@ import '../App.css'
 
 interface EntryScreenProps {
   onSquadReady: (squadId: string) => void
+  /** Present when the user already has squads and can go back to them. */
+  onCancel?: () => void
 }
 
 type Mode = 'choice' | 'create' | 'join'
 
-function EntryScreen({ onSquadReady }: EntryScreenProps) {
+function EntryScreen({ onSquadReady, onCancel }: EntryScreenProps) {
   const [mode, setMode] = useState<Mode>('choice')
   const [squadName, setSquadName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
@@ -75,6 +77,11 @@ function EntryScreen({ onSquadReady }: EntryScreenProps) {
             <button type="button" className="btn btn-secondary" onClick={() => setMode('join')}>
               Join with invite code
             </button>
+            {onCancel && (
+              <button type="button" className="btn btn-ghost" onClick={onCancel}>
+                Back to my squads
+              </button>
+            )}
           </div>
         )}
 

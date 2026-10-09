@@ -1,8 +1,5 @@
 import type { Squad } from '../types'
 import { ApiError, apiFetch } from './apiClient'
-import { readJson, writeJson } from './localStorageClient'
-
-const ACTIVE_SQUAD_KEY = 'holidayCalendar.activeSquadId.v1'
 
 // mirrors POST /groups — creator is derived server-side from the SSO bearer token
 export function createSquad(name: string): Promise<Squad> {
@@ -30,14 +27,12 @@ export function listSquads(): Promise<Squad[]> {
   return apiFetch<Squad[]>('/groups')
 }
 
-export function getActiveSquadId(): string | null {
-  return readJson<string | null>(ACTIVE_SQUAD_KEY, null)
+// mirrors POST /groups/{id}/invite-code/regenerate — any member may rotate the code
+export function regenerateInviteCode(squadId: string): Promise<Squad> {
+  return apiFetch<Squad>(`/groups/${squadId}/invite-code/regenerate`, { method: 'POST' })
 }
 
-export function setActiveSquadId(id: string): void {
-  writeJson(ACTIVE_SQUAD_KEY, id)
-}
-
-export function clearActiveSquadId(): void {
-  window.localStorage.removeItem(ACTIVE_SQUAD_KEY)
+// mirrors DELETE /groups/{id}/members/me — also removes the caller's events from the squad
+export async function leaveSquad(squadId: string): Promise<void> {
+  await apiFetch<void>(`/groups/${squadId}/members/me`, { method: 'DELETE' })
 }
