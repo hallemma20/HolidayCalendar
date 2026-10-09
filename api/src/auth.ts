@@ -70,7 +70,9 @@ export async function getAuthenticatedUser(request: HttpRequest): Promise<Authen
     throw new HttpError(500, 'Server is missing AAD_TENANT_ID/AAD_CLIENT_ID configuration')
   }
 
-  const header = request.headers.get('authorization')
+  // Azure Static Web Apps replaces the Authorization header on requests to its managed API
+  // with its own platform token, so the Teams token travels in a custom header instead.
+  const header = request.headers.get('x-teams-token') ?? request.headers.get('authorization')
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null
   if (!token) {
     throw new HttpError(401, 'Missing bearer token')
