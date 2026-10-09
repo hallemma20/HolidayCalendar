@@ -50,7 +50,9 @@ function verifyToken(token: string): Promise<TeamsTokenClaims> {
       token,
       getSigningKey,
       {
-        audience: CLIENT_ID,
+        // Teams SSO tokens use the Application ID URI (the manifest's webApplicationInfo.resource)
+        // as their audience; the bare client ID is accepted too for v2 tokens.
+        audience: [CLIENT_ID as string, new RegExp(`^api://[^/]+/${CLIENT_ID}$`)],
         // Teams SSO tokens can be issued as either v1 or v2 depending on tenant/app config.
         issuer: [`https://login.microsoftonline.com/${TENANT_ID}/v2.0`, `https://sts.windows.net/${TENANT_ID}/`],
       },
