@@ -4,8 +4,9 @@ import { Calendar, type View } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { eventPropGetter, localizer, mapHolidayToEvent } from '../calendar/calendarAdapters'
 import { addHoliday, deleteHoliday, listHolidays, updateHoliday } from '../storage/holidays'
-import type { Holiday, NewHolidayInput, Squad } from '../types'
+import type { Holiday, HolidayType, NewHolidayInput, Squad } from '../types'
 import EventModal from '../components/EventModal'
+import FilterPanel from '../components/FilterPanel'
 import RegenerateCodeModal from '../components/RegenerateCodeModal'
 import LeaveSquadModal from '../components/LeaveSquadModal'
 import { leaveSquad, regenerateInviteCode } from '../storage/squads'
@@ -22,6 +23,12 @@ interface CalendarScreenProps {
 }
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; holiday: Holiday } | null
+
+function toggleInSet<T>(set: ReadonlySet<T>, item: T): ReadonlySet<T> {
+  const next = new Set(set)
+  if (!next.delete(item)) next.add(item)
+  return next
+}
 
 function shiftDate(current: Date, view: View, direction: 1 | -1): Date {
   return view === 'week' ? addWeeks(current, direction) : addMonths(current, direction)
@@ -52,6 +59,8 @@ function CalendarScreen({
   const [modal, setModal] = useState<ModalState>(null)
   const [view, setView] = useState<View>('month')
   const [date, setDate] = useState(new Date())
+  const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<HolidayType>>(new Set())
+  const [hiddenPeople, setHiddenPeople] = useState<ReadonlySet<string>>(new Set())
   const [copied, setCopied] = useState(false)
   const [leave, setLeave] = useState<{ error: string | null; isSubmitting: boolean } | null>(null)
   const [regenerate, setRegenerate] = useState<{ error: string | null; isSubmitting: boolean } | null>(null)
@@ -60,6 +69,8 @@ function CalendarScreen({
     let cancelled = false
 
     async function load() {
+      setHiddenTypes(new Set())
+      setHiddenPeople(new Set())
       setIsLoading(true)
       setError(null)
       try {
@@ -152,6 +163,8 @@ function CalendarScreen({
       })
     }
   }
+
+  const visibleHolidays = holidays.filter((h) => !hiddenTypes.has(h.type) && !hiddenPeople.has(h.oid))
 
   if (isLoading) {
     return (
@@ -247,10 +260,11 @@ function CalendarScreen({
         </button>
       </div>
 
+      <div className="calendar-body">
       <div className="calendar-surface">
         <Calendar
           localizer={localizer}
-          events={holidays.map(mapHolidayToEvent)}
+          events={visibleHolidays.map(mapHolidayToEvent)}
           startAccessor="start"
           endAccessor="end"
           eventPropGetter={eventPropGetter}
@@ -263,6 +277,21 @@ function CalendarScreen({
           onSelectEvent={(event) => setModal({ mode: 'edit', holiday: event.resource })}
           style={{ height: 650 }}
         />
+      </div>
+      <FilterPanel
+        members={squad?.members ?? []}
+        currentUserOid={currentUserOid}
+        hiddenTypes={hiddenTypes}
+        hiddenPeople={hiddenPeople}
+        onToggleType={(type) => setHiddenTypes((prev) => toggleInSet(prev, type))}
+        onTogglePerson={(oid) => setHiddenPeople((prev) => toggleInSet(prev, oid))}
+        onResetTypes={() => setHiddenTypes(new Set())}
+        onResetPeople={() => setHiddenPeople(new Set())}
+        onResetAll={() => {
+          setHiddenTypes(new Set())
+          setHiddenPeople(new Set())
+        }}
+      />
       </div>
 
       {leave && (
