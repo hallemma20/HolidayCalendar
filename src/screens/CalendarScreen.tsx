@@ -7,6 +7,8 @@ import { addHoliday, deleteHoliday, listHolidays, updateHoliday } from '../stora
 import type { Holiday, HolidayType, NewHolidayInput, Squad } from '../types'
 import EventModal from '../components/EventModal'
 import FilterPanel from '../components/FilterPanel'
+import DevMockTools from '../components/DevMockTools' // DEV-MOCK
+import { makeMockHoliday, mockMembersFor } from '../components/devMockData' // DEV-MOCK
 import RegenerateCodeModal from '../components/RegenerateCodeModal'
 import LeaveSquadModal from '../components/LeaveSquadModal'
 import { leaveSquad, regenerateInviteCode } from '../storage/squads'
@@ -61,6 +63,7 @@ function CalendarScreen({
   const [date, setDate] = useState(new Date())
   const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<HolidayType>>(new Set())
   const [hiddenPeople, setHiddenPeople] = useState<ReadonlySet<string>>(new Set())
+  const [mockHolidays, setMockHolidays] = useState<Holiday[]>([]) // DEV-MOCK
   const [copied, setCopied] = useState(false)
   const [leave, setLeave] = useState<{ error: string | null; isSubmitting: boolean } | null>(null)
   const [regenerate, setRegenerate] = useState<{ error: string | null; isSubmitting: boolean } | null>(null)
@@ -71,6 +74,7 @@ function CalendarScreen({
     async function load() {
       setHiddenTypes(new Set())
       setHiddenPeople(new Set())
+      setMockHolidays([]) // DEV-MOCK
       setIsLoading(true)
       setError(null)
       try {
@@ -164,7 +168,10 @@ function CalendarScreen({
     }
   }
 
-  const visibleHolidays = holidays.filter((h) => !hiddenTypes.has(h.type) && !hiddenPeople.has(h.oid))
+  // DEV-MOCK: mockHolidays merged in
+  const visibleHolidays = [...holidays, ...mockHolidays].filter(
+    (h) => !hiddenTypes.has(h.type) && !hiddenPeople.has(h.oid),
+  )
 
   if (isLoading) {
     return (
@@ -227,6 +234,13 @@ function CalendarScreen({
 
       {error && <p className="entry-error">{error}</p>}
 
+      {/* DEV-MOCK */}
+      <DevMockTools
+        mockCount={mockHolidays.length}
+        onAdd={() => setMockHolidays((prev) => [...prev, makeMockHoliday(squadId, date)])}
+        onClear={() => setMockHolidays([])}
+      />
+
       <div className="calendar-toolbar">
         <div className="view-toggle">
           <button
@@ -279,7 +293,7 @@ function CalendarScreen({
         />
       </div>
       <FilterPanel
-        members={squad?.members ?? []}
+        members={[...(squad?.members ?? []), ...mockMembersFor(mockHolidays)]} // DEV-MOCK
         currentUserOid={currentUserOid}
         hiddenTypes={hiddenTypes}
         hiddenPeople={hiddenPeople}
