@@ -474,15 +474,20 @@
   border-left: 1px solid var(--border);
 }
 
-.rbc-off-range-bg {
-  background: rgba(255, 255, 255, 0.02);
+/* Scoped under .calendar-surface so these beat react-big-calendar's own light-theme
+   defaults, which load after App.css. */
+
+/* Days from the previous/next month: darker than the in-month days, with muted text. */
+.calendar-surface .rbc-off-range-bg {
+  background: rgba(0, 0, 0, 0.28);
 }
 
-.rbc-off-range {
+.calendar-surface .rbc-off-range {
   color: var(--text-muted);
 }
 
-.rbc-today {
+/* Today: a translucent wash of the accent colour so text stays readable. */
+.calendar-surface .rbc-today {
   background: var(--accent-bg);
 }
 
