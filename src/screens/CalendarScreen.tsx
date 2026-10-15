@@ -95,17 +95,34 @@ function CalendarScreen({
     }
   }, [squadId])
 
-  async function handleAddEvent(input: NewHolidayInput) {
+  async function handleAddEvent(input: NewHolidayInput, squadIds: string[]) {
     setIsSubmitting(true)
-    try {
-      const holiday = await addHoliday(squadId, input)
-      setHolidays((prev) => [...prev, holiday])
-      setModal(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add event.')
-    } finally {
-      setIsSubmitting(false)
+    setError(null)
+    // The event is created once per selected squad; each copy is independent afterwards.
+    const results = await Promise.allSettled(squadIds.map((id) => addHoliday(id, input)))
+    const failedSquadIds = squadIds.filter((_, i) => results[i].status === 'rejected')
+
+    // Only the squad being viewed has its calendar on screen; the others load fresh when opened.
+    const idx = squadIds.indexOf(squadId)
+    const forCurrent = idx >= 0 ? results[idx] : undefined
+    if (forCurrent?.status === 'fulfilled') {
+      setHolidays((prev) => [...prev, forCurrent.value])
     }
+
+    if (failedSquadIds.length === 0) {
+      setModal(null)
+    } else {
+      // Close even on partial failure so a retry can't duplicate the squads that succeeded.
+      const names = failedSquadIds.map((id) => squads.find((s) => s.id === id)?.name ?? 'a squad').join(', ')
+      const addedCount = squadIds.length - failedSquadIds.length
+      setError(
+        addedCount === 0
+          ? `Failed to add the event (${names}).`
+          : `The event was added to ${addedCount} squad${addedCount === 1 ? '' : 's'} but failed for: ${names}. Add it again to those squads only.`,
+      )
+      if (addedCount > 0) setModal(null)
+    }
+    setIsSubmitting(false)
   }
 
   async function handleUpdateEvent(holidayId: string, input: NewHolidayInput) {
@@ -330,6 +347,7 @@ function CalendarScreen({
       {modal?.mode === 'add' && (
         <EventModal
           mode="add"
+          squads={squads}
           isSubmitting={isSubmitting}
           onClose={() => setModal(null)}
           onSubmit={handleAddEvent}

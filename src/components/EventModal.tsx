@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { format } from 'date-fns'
 import { HOLIDAY_TYPES } from '../types'
-import type { Holiday, HolidayType, NewHolidayInput } from '../types'
+import type { Holiday, HolidayType, NewHolidayInput, Squad } from '../types'
 import TypeSelect from './TypeSelect'
 import '../App.css'
 
@@ -10,8 +10,11 @@ interface EventModalProps {
   initial?: Holiday
   canEdit?: boolean
   isSubmitting?: boolean
+  // Add mode only: the user's squads. With 2+, a "Squads" section lets them choose
+  // which calendars the event goes to (all by default).
+  squads?: Squad[]
   onClose: () => void
-  onSubmit: (input: NewHolidayInput) => void
+  onSubmit: (input: NewHolidayInput, squadIds: string[]) => void
   onDelete?: () => void
 }
 
@@ -23,7 +26,16 @@ function toTimeInput(iso: string): string {
   return format(new Date(iso), 'HH:mm')
 }
 
-function EventModal({ mode, initial, canEdit = true, isSubmitting, onClose, onSubmit, onDelete }: EventModalProps) {
+function EventModal({
+  mode,
+  initial,
+  canEdit = true,
+  isSubmitting,
+  squads = [],
+  onClose,
+  onSubmit,
+  onDelete,
+}: EventModalProps) {
   const [type, setType] = useState<HolidayType>(initial?.type ?? HOLIDAY_TYPES[0])
   const [startDate, setStartDate] = useState(initial ? toDateInput(initial.startUtc) : '')
   const [endDate, setEndDate] = useState(initial ? toDateInput(initial.endUtc) : '')
@@ -32,8 +44,21 @@ function EventModal({ mode, initial, canEdit = true, isSubmitting, onClose, onSu
   const [endTime, setEndTime] = useState(initial && !initial.allDay ? toTimeInput(initial.endUtc) : '')
   const [note, setNote] = useState(initial?.note ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [squadsOpen, setSquadsOpen] = useState(false)
+  // Stored as the squads switched OFF, so the default (empty) means "all squads".
+  const [excludedSquadIds, setExcludedSquadIds] = useState<ReadonlySet<string>>(new Set())
 
   const readOnly = mode === 'edit' && !canEdit
+  const showSquads = mode === 'add' && squads.length > 1
+  const selectedSquadIds = squads.filter((s) => !excludedSquadIds.has(s.id)).map((s) => s.id)
+
+  function toggleSquad(squadId: string) {
+    setExcludedSquadIds((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(squadId)) next.add(squadId)
+      return next
+    })
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -53,15 +78,24 @@ function EventModal({ mode, initial, canEdit = true, isSubmitting, onClose, onSu
       return
     }
 
-    onSubmit({
-      startDate,
-      endDate,
-      startTime: allDay ? undefined : startTime,
-      endTime: allDay ? undefined : endTime,
-      allDay,
-      type,
-      note: note.trim() || undefined,
-    })
+    if (showSquads && selectedSquadIds.length === 0) {
+      setSquadsOpen(true)
+      setError('Select at least one squad to add this event to.')
+      return
+    }
+
+    onSubmit(
+      {
+        startDate,
+        endDate,
+        startTime: allDay ? undefined : startTime,
+        endTime: allDay ? undefined : endTime,
+        allDay,
+        type,
+        note: note.trim() || undefined,
+      },
+      selectedSquadIds,
+    )
   }
 
   return (
@@ -138,6 +172,39 @@ function EventModal({ mode, initial, canEdit = true, isSubmitting, onClose, onSu
                   disabled={readOnly}
                 />
               </div>
+            </div>
+          )}
+
+          {showSquads && (
+            <div className="field">
+              <label>Squads</label>
+              <p className="squad-picker-summary">
+                {selectedSquadIds.length === squads.length
+                  ? 'By default, this event will be added to all the squad calendars you are part of.'
+                  : `This event will be added to ${selectedSquadIds.length} of your ${squads.length} squads.`}
+              </p>
+              <button
+                type="button"
+                className="squad-picker-toggle"
+                aria-expanded={squadsOpen}
+                onClick={() => setSquadsOpen((open) => !open)}
+              >
+                {squadsOpen ? '▾' : '▸'} Customise squads
+              </button>
+              {squadsOpen && (
+                <div className="squad-picker-list">
+                  {squads.map((s) => (
+                    <label key={s.id} className="squad-picker-option">
+                      <input
+                        type="checkbox"
+                        checked={!excludedSquadIds.has(s.id)}
+                        onChange={() => toggleSquad(s.id)}
+                      />
+                      {s.name}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
